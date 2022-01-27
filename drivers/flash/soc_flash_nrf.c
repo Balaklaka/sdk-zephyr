@@ -19,6 +19,13 @@
 
 #include "soc_flash_nrf.h"
 
+#if CONFIG_NRF52_DBG_PINS
+#include <nrf52_dbg_pins.h>
+#endif
+
+#define PIN_DEBUG_ENABLE
+#include <pin_debug_transport.h>
+
 #define LOG_LEVEL CONFIG_FLASH_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(flash_nrf);
@@ -348,8 +355,13 @@ static int write_synchronously(off_t addr, const void *data, size_t len)
 
 #endif /* !CONFIG_SOC_FLASH_NRF_RADIO_SYNC_NONE */
 
+static uint32_t test = 0x1;
+static uint32_t addr = 0xFCFFC;
 static int erase_op(void *context)
 {
+	DBP_PORTA_ENABLE;
+	DBP_PORTB_ENABLE;
+
 	uint32_t pg_size = nrfx_nvmc_flash_page_size_get();
 	struct flash_context *e_ctx = context;
 
@@ -379,16 +391,32 @@ static int erase_op(void *context)
 		}
 
 #if defined(CONFIG_SOC_FLASH_NRF_PARTIAL_ERASE)
+		DBP15_OFF;
+		DBP15_ON;
 		if (e_ctx->flash_addr == e_ctx->flash_addr_next) {
+			DBP12_OFF;
+			DBP12_ON;
 			nrfx_nvmc_page_partial_erase_init(e_ctx->flash_addr,
 				CONFIG_SOC_FLASH_NRF_PARTIAL_ERASE_MS);
 			e_ctx->flash_addr_next += pg_size;
+			DBP12_OFF;
 		}
 
 		if (nrfx_nvmc_page_partial_erase_continue()) {
+			DBP13_OFF;
+			DBP13_ON;
 			e_ctx->len -= pg_size;
 			e_ctx->flash_addr += pg_size;
+			DBP13_OFF;
 		}
+
+		DBP14_OFF;
+		DBP14_ON;
+		nrfx_nvmc_word_write(addr, test);
+		addr -= 4;
+		test += 1;
+		DBP14_OFF;
+		DBP15_OFF;
 #else
 		(void)nrfx_nvmc_page_erase(e_ctx->flash_addr);
 		e_ctx->len -= pg_size;

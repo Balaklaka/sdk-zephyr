@@ -29,6 +29,10 @@
 #include "rpl.h"
 #include "settings.h"
 
+#if CONFIG_SHDN_MANAGER
+#include "shdn/shdn_manager.h"
+#endif
+
 /* Replay Protection List information for persistent storage. */
 struct rpl_val {
 	uint32_t seq:24,
@@ -37,6 +41,10 @@ struct rpl_val {
 
 static struct bt_mesh_rpl replay_list[CONFIG_BT_MESH_CRPL];
 static ATOMIC_DEFINE(store, CONFIG_BT_MESH_CRPL);
+
+#if CONFIG_SHDN_MANAGER
+SHDN_ENTRY_DEFINE(rpl_data, 0x1234, replay_list, sizeof(replay_list));
+#endif
 
 static inline int rpl_idx(const struct bt_mesh_rpl *rpl)
 {
@@ -96,7 +104,7 @@ void bt_mesh_rpl_update(struct bt_mesh_rpl *rpl,
 	rpl->seq = rx->seq;
 	rpl->old_iv = rx->old_iv;
 
-	if (IS_ENABLED(CONFIG_BT_SETTINGS)) {
+	if (!IS_ENABLED(CONFIG_SHDN_MANAGER) && IS_ENABLED(CONFIG_BT_SETTINGS)) {
 		schedule_rpl_store(rpl, false);
 	}
 }
@@ -164,7 +172,7 @@ void bt_mesh_rpl_clear(void)
 {
 	BT_DBG("");
 
-	if (IS_ENABLED(CONFIG_BT_SETTINGS)) {
+	if (!IS_ENABLED(CONFIG_SHDN_MANAGER) && IS_ENABLED(CONFIG_BT_SETTINGS)) {
 		schedule_rpl_clear();
 	} else {
 		(void)memset(replay_list, 0, sizeof(replay_list));
@@ -210,7 +218,8 @@ void bt_mesh_rpl_reset(void)
 
 		if (rpl->src) {
 			if (rpl->old_iv) {
-				if (IS_ENABLED(CONFIG_BT_SETTINGS)) {
+				if (!IS_ENABLED(CONFIG_SHDN_MANAGER) &&
+				    IS_ENABLED(CONFIG_BT_SETTINGS)) {
 					clear_rpl(rpl);
 				} else {
 					(void)memset(rpl, 0, sizeof(*rpl));
@@ -218,7 +227,8 @@ void bt_mesh_rpl_reset(void)
 			} else {
 				rpl->old_iv = true;
 
-				if (IS_ENABLED(CONFIG_BT_SETTINGS)) {
+				if (!IS_ENABLED(CONFIG_SHDN_MANAGER) &&
+				    IS_ENABLED(CONFIG_BT_SETTINGS)) {
 					schedule_rpl_store(rpl, true);
 				}
 			}
@@ -317,7 +327,8 @@ void bt_mesh_rpl_pending_store(uint16_t addr)
 {
 	int i;
 
-	if (!IS_ENABLED(CONFIG_BT_SETTINGS) ||
+	if (IS_ENABLED(CONFIG_SHDN_MANAGER) ||
+	    !IS_ENABLED(CONFIG_BT_SETTINGS) ||
 	    (!BT_MESH_ADDR_IS_UNICAST(addr) &&
 	     addr != BT_MESH_ADDR_ALL_NODES)) {
 		return;

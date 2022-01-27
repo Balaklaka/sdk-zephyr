@@ -140,6 +140,10 @@ if(CONFIG_SETTINGS)
   zephyr_iterable_section(NAME settings_handler_static KVMA RAM_REGION GROUP RODATA_REGION SUBALIGN 4)
 endif()
 
+if(CONFIG_SHDN_MANAGER)
+  zephyr_iterable_section(NAME shdn_entry KVMA RAM_REGION GROUP RODATA_REGION SUBALIGN 4)
+endif()
+
 zephyr_iterable_section(NAME k_p4wq_initparam KVMA RAM_REGION GROUP RODATA_REGION SUBALIGN 4)
 
 if(CONFIG_EMUL)
