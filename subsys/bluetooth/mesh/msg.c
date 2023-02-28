@@ -12,6 +12,9 @@
 
 #include "msg.h"
 
+#define PIN_DEBUG_ENABLE
+#include "pin_debug_transport.h"
+
 void bt_mesh_model_msg_init(struct net_buf_simple *msg, uint32_t opcode)
 {
 	net_buf_simple_init(msg, 0);
@@ -63,7 +66,10 @@ int bt_mesh_msg_ack_ctx_wait(struct bt_mesh_msg_ack_ctx *ack, k_timeout_t timeou
 {
 	int err;
 
+	BT_ERR("Ack wait op(%d), dst(%d)", ack->op, ack->dst);
+	DBP1_ON;
 	err = k_sem_take(&ack->sem, timeout);
+	DBP1_OFF;
 	bt_mesh_msg_ack_ctx_clear(ack);
 
 	if (err == -EAGAIN) {
@@ -77,8 +83,16 @@ bool bt_mesh_msg_ack_ctx_match(const struct bt_mesh_msg_ack_ctx *ack,
 			       uint32_t op, uint16_t addr, void **user_data)
 {
 	if (ack->op != op || (BT_MESH_ADDR_IS_UNICAST(ack->dst) && ack->dst != addr)) {
+		//DBP2_ON;
+		BT_ERR("Ack did not match, op(%d:%d), dst(%d) addr(%d)",
+			ack->op, op, ack->dst, addr);
+		//DBP2_OFF;
 		return false;
 	}
+	//DBP3_ON;
+	BT_ERR("Ack give, op(%d:%d), dst(%d) addr(%d)",
+		ack->op, op, ack->dst, addr);
+	//DBP3_OFF;
 
 	if (user_data != NULL) {
 		*user_data = ack->user_data;

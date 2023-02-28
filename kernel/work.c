@@ -18,6 +18,9 @@
 #include <ksched.h>
 #include <zephyr/sys/printk.h>
 
+#define PIN_DEBUG_ENABLE
+#include "pin_debug_transport.h"
+
 static inline void flag_clear(uint32_t *flagp,
 			      uint32_t bit)
 {
@@ -393,7 +396,9 @@ int k_work_submit_to_queue(struct k_work_q *queue,
 	 * if the queue state changed.
 	 */
 	if (ret > 0) {
+		DBP3_ON;
 		z_reschedule_unlocked();
+		DBP3_OFF;
 	}
 
 	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_work, submit_to_queue, queue, work, ret);
